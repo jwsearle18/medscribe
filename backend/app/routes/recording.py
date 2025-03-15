@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-transcribe_router = APIRouter(
-    prefix = "/transcribe",
+router = APIRouter(
+    prefix = "/api",
     tags=["record"]
 )
 
