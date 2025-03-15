@@ -15,13 +15,13 @@ router = APIRouter(
 # Load environment variables
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-if not DEEPGRAM_API_KEY or not SUPABASE_URL or not SUPABASE_KEY:
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+if not DEEPGRAM_API_KEY or not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     raise ValueError("Missing required environment variables")
 
 # Initialize clients
 deepgram = DeepgramClient(DEEPGRAM_API_KEY)
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 @router.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
