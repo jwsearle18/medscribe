@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.routes.recording import transcribe_router
 
 app = FastAPI()
 
@@ -15,3 +16,4 @@ app.add_middleware(
 def root():
     return {"message": "This is the root"}
 
+app.include_router(transcribe_router)
