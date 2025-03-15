@@ -37,14 +37,6 @@ const Recorder: React.FC = () => {
     formData.append('file', audioBlob, 'recording.webm');
 
     try {
-      const recordResponse = await fetch('/api/record/stop', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!recordResponse.ok) {
-        throw new Error('Failed to save recording');
-      }
-
       const transcribeResponse = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
