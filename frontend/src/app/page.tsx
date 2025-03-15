@@ -1,5 +1,6 @@
+import Recording from "../components/recording/recording";
 export default function Home() {
   return (
-    <p>this will be content</p>
+    <Recording />
   );
 }
