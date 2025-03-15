@@ -47,6 +47,8 @@ const Recorder: React.FC = () => {
           }
           const data = await transcribeResponse.json();
           setTranscript(data.transcript);
+          setTranscriptionId(data.id); // Store the transcription ID
+          console.log("Transcription stored with ID:", data.id)
         } catch (error) {
           console.error('Error processing audio:', error);
         }
