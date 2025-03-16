@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from dotenv import load_dotenv
 from deepgram import DeepgramClient, PrerecordedOptions
 from supabase import create_client, Client
+from pydantic import BaseModel
 import os
 
 
