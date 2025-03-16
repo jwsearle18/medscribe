@@ -1,11 +1,14 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, FormEvent } from 'react';
 
 const Recorder: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [transcriptionId, setTranscriptionId] = useState<string | null>(null);
+  const [id, setTranscriptionId] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [patientId, setPatientId] = useState('');
+  const [title, setTitle] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -15,7 +18,6 @@ const Recorder: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -30,7 +32,6 @@ const Recorder: React.FC = () => {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         audioChunksRef.current = [];
-
         const formData = new FormData();
         formData.append('file', audioBlob, 'recording.webm');
 
@@ -47,8 +48,8 @@ const Recorder: React.FC = () => {
           }
           const data = await transcribeResponse.json();
           setTranscript(data.transcript);
-          setTranscriptionId(data.id); // Store the transcription ID
-          console.log("Transcription stored with ID:", data.id)
+          setTranscriptionId(data.id);
+          console.log("Transcription stored with ID:", data.id);
         } catch (error) {
           console.error('Error processing audio:', error);
         }
@@ -60,7 +61,6 @@ const Recorder: React.FC = () => {
         }
       };
 
-      // Start recording
       mediaRecorder.start();
       setIsRecording(true);
       setIsPaused(false);
@@ -72,13 +72,10 @@ const Recorder: React.FC = () => {
   // Pause or resume recording
   const handlePauseResume = () => {
     if (!mediaRecorderRef.current) return;
-
     if (!isPaused) {
-      // Pause the recording
       mediaRecorderRef.current.pause();
       setIsPaused(true);
     } else {
-      // Resume the recording
       mediaRecorderRef.current.resume();
       setIsPaused(false);
     }
@@ -101,6 +98,34 @@ const Recorder: React.FC = () => {
       }
     };
   }, []);
+
+  // Handle save form submission
+  const handleSaveSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/save-transcription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          patientId,
+          transcript,
+          title
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save transcription');
+      }
+      const data = await response.json();
+      console.log('Transcription saved:', data);
+      // Close modal and clear form fields
+      setShowSaveModal(false);
+      setPatientId('');
+      setTitle('');
+    } catch (error) {
+      console.error('Error saving transcription:', error);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto text-center p-10">
@@ -134,9 +159,63 @@ const Recorder: React.FC = () => {
       </div>
 
       {transcript && (
-        <div className="glass-card">
+        <div className="glass-card p-4 rounded">
           <h2 className="text-xl font-semibold mb-2">Transcription</h2>
           <p>{transcript}</p>
+          <button
+            className="mt-4 px-4 py-2 bg-green-600 text-white rounded"
+            onClick={() => setShowSaveModal(true)}
+          >
+            Save Transcription
+          </button>
+        </div>
+      )}
+
+      {showSaveModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4">Save Transcription</h3>
+            <form onSubmit={handleSaveSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="patientId" className="block text-left mb-1">
+                  Patient ID
+                </label>
+                <input
+                  id="patientId"
+                  type="text"
+                  className="w-full border px-3 py-2 rounded"
+                  value={patientId}
+                  onChange={(e) => setPatientId(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="title" className="block text-left mb-1">
+                  Title
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  className="w-full border px-3 py-2 rounded"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-gray-300"
+                  onClick={() => setShowSaveModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

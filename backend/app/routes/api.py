@@ -60,25 +60,10 @@ async def transcribe(file: UploadFile = File(...)):
 
         # Extract the transcript from the response
         transcript = response['results']['channels'][0]['alternatives'][0]['transcript']
-
-        # Store transcription in Supabase
-        data = {
-            "transcript": transcript,
-            "file_name": file.filename
-            # Add "user_id" here if you implement authentication
-        }
-
-        supabase_response = supabase.table("transcriptions").insert(data).execute()
-
-        if not supabase_response.data:
-            raise HTTPException(status_code=500, detail="Failed to store transcription in Supabase")
-        
         return {
-            "transcript": transcript,
-            "id": supabase_response.data[0]["id"],
-            "full_response": response.to_dict()
-        }
-
+             "transcript": transcript,
+             "full_response": response.to_dict()
+         }
     except Exception as e:
         raise HTTPException(
             status_code=500,
