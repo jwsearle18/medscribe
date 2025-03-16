@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Recorder: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -160,7 +161,7 @@ const Recorder: React.FC = () => {
           <h2 className="text-xl font-semibold mb-2">Transcription</h2>
           <p>{transcript}</p>
           <button
-            className="mt-4 px-4 py-2 bg-green-600 text-white rounded"
+            className="mt-4 px-4 py-2 green-btn"
             onClick={() => setShowSaveModal(true)}
           >
             Save Transcription
@@ -168,53 +169,74 @@ const Recorder: React.FC = () => {
         </div>
       )}
 
-      {showSaveModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Save Transcription</h3>
-            <form onSubmit={handleSaveSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="patientId" className="block text-left mb-1">
-                  Patient ID
-                </label>
-                <input
-                  id="patientId"
-                  type="text"
-                  className="w-full border px-3 py-2 rounded"
-                  value={patientId}
-                  onChange={(e) => setPatientId(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="title" className="block text-left mb-1">
-                  Title
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  className="w-full border px-3 py-2 rounded"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded bg-gray-300"
-                  onClick={() => setShowSaveModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showSaveModal && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 flex items-center justify-center bg-black/70"
+          >
+            <motion.div
+              key="modalContent"
+              initial={{ y: 50 }}
+              animate={{ y: 0 }}
+              exit={{ y: 50 }}
+              transition={{
+                type: 'spring',
+                stiffness: 200,
+                damping: 25,
+                duration: 0.75
+              }}
+              className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black"
+            >
+              <h3 className="text-lg font-bold mb-4">Save Transcription</h3>
+              <form onSubmit={handleSaveSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="patientId" className="block text-left mb-1">
+                    Patient ID
+                  </label>
+                  <input
+                    id="patientId"
+                    type="text"
+                    className="w-full border px-3 py-2 rounded"
+                    value={patientId}
+                    onChange={(e) => setPatientId(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="title" className="block text-left mb-1">
+                    Title
+                  </label>
+                  <input
+                    id="title"
+                    type="text"
+                    className="w-full border px-3 py-2 rounded"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 gray-btn"
+                    onClick={() => setShowSaveModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="px-4 py-2 recording-btn">
+                    Save
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
