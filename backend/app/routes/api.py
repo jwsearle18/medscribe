@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, status
 from dotenv import load_dotenv
 from deepgram import DeepgramClient, PrerecordedOptions
 from supabase import create_client, Client
@@ -70,36 +70,24 @@ async def transcribe(file: UploadFile = File(...)):
             status_code=500,
             detail=f"Transcription error: {str(e)}"
         )
-    
-@router.get("/transcriptions/{transcription_id}")
-async def get_transcription(transcription_id: str):
-    """
-    Retrieve a transcription by ID from Supabase
-    """
+
+
+class saveTranscription(BaseModel):
+    patientId: str
+    transcript: str
+    title: str
+
+
+@router.post("/save-transcription")
+def saveTranscription(transcription: saveTranscription):
     try:
-        response = supabase.table("transcriptions").select("*").eq("id", transcription_id).execute()
-        
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Transcription not found")
-        
-        return response.data[0]
-    
+        data = {
+            "patientId": transcription.patientId,
+            "transcript": transcription.transcript,
+            "title": transcription.title,
+        }
+        # Insert the data into the transcriptions table.
+        result = supabase.table("transcriptions").insert(data).execute()
+        return result.data[0] if result.data else {}
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving transcription: {str(e)}"
-        )
-    
-@router.get("/transcriptions")
-async def list_transcriptions():
-    """
-    List all transcriptions from Supabase
-    """
-    try:
-        response = supabase.table("transcriptions").select("*").execute()
-        return response.data
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error listing transcriptions: {str(e)}"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
