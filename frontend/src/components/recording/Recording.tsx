@@ -5,7 +5,6 @@ const Recorder: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [id, setTranscriptionId] = useState<string | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [patientId, setPatientId] = useState('');
   const [title, setTitle] = useState('');
@@ -48,7 +47,6 @@ const Recorder: React.FC = () => {
           }
           const data = await transcribeResponse.json();
           setTranscript(data.transcript);
-          setTranscriptionId(data.id);
           console.log("Transcription stored with ID:", data.id);
         } catch (error) {
           console.error('Error processing audio:', error);
@@ -107,7 +105,6 @@ const Recorder: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id,
           patientId,
           transcript,
           title
