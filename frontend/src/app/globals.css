@@ -34,7 +34,9 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
+  background-attachment: fixed;
 }
+
 
 .recording-btn {
   background-color: var(--color-skyblue);
@@ -88,3 +90,7 @@ body {
   cursor: pointer;
 }
 
+.forms-btn-pressed {
+  background: var(--color-dark-skyblue);
+  border-color: var(--color-dark-skyblue);
+}
