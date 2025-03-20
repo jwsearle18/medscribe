@@ -30,7 +30,9 @@ This project aims to address the common pain point of time-consuming documentati
 
 ## Current Status
 This project is a work in progress as part of the Beach2Bedside competition. Key milestones include:
-- [ ] Completing speech-to-text integration
+- [x] Be able to record using the users computer microphone
+- [x] Completing speech-to-text integration
+- [ ] Setup AI note generation based off the session transcription
 - [ ] Refining note generation algorithms
 - [ ] Implementing secure data encryption
 - [ ] Adding export functionality (e.g., PDF, EHR integration)
@@ -38,7 +40,7 @@ This project is a work in progress as part of the Beach2Bedside competition. Key
 ## Team
 - [Spencer Boris] - [Developer]
 - [Harrison Oakes] - [Developer]
-- [Tommy 
+- [Tommy Lundquist] - [Product Manager]
 
 
 ## Acknowledgments
