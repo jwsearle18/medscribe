@@ -47,5 +47,3 @@ This project is a work in progress as part of the Beach2Bedside competition. Key
 - Thanks to the Beach2Bedside competition organizers for this opportunity.
 
 ---
-
-Feel free to customize this further based on your project's specifics (e.g., tech stack, team names, or additional features). Let me know if you'd like help refining any section! Good luck in the competition!
