@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, status
 from dotenv import load_dotenv
 from deepgram import DeepgramClient, PrerecordedOptions
+from supabase import create_client, Client
+from pydantic import BaseModel
 import os
 
 
@@ -11,13 +13,16 @@ router = APIRouter(
     tags=["record"]
 )
 
-# Get Deepgram API key from environment variables
+# Load environment variables
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-if not DEEPGRAM_API_KEY:
-    raise ValueError("DEEPGRAM_API_KEY not found in environment variables")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+if not DEEPGRAM_API_KEY or not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    raise ValueError("Missing required environment variables")
 
-# Initialize Deepgram client
+# Initialize clients
 deepgram = DeepgramClient(DEEPGRAM_API_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 @router.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
@@ -56,14 +61,33 @@ async def transcribe(file: UploadFile = File(...)):
 
         # Extract the transcript from the response
         transcript = response['results']['channels'][0]['alternatives'][0]['transcript']
-        
         return {
-            "transcript": transcript,
-            "full_response": response.to_dict()
-        }
-
+             "transcript": transcript,
+             "full_response": response.to_dict()
+         }
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Transcription error: {str(e)}"
         )
+
+
+class saveTranscription(BaseModel):
+    patientId: str
+    transcript: str
+    title: str
+
+
+@router.post("/save-transcription")
+def saveTranscription(transcription: saveTranscription):
+    try:
+        data = {
+            "patientId": transcription.patientId,
+            "transcript": transcription.transcript,
+            "title": transcription.title,
+        }
+        # Insert the data into the transcriptions table.
+        result = supabase.table("transcriptions").insert(data).execute()
+        return result.data[0] if result.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

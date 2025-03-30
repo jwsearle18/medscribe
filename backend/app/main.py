@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.recording import router as transcribe_router
+from app.routes.api import router as transcribe_router
 from app.routes.ai import router as ai_router
 
 app = FastAPI()
