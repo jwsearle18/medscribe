@@ -4,7 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FormSelection from './FormSelection';
-import GeneratedFormDisplay from './GeneratedFormDisplay';
+import EditFormsModal from './EditFormsModal';
+import ViewNoteModal from './ViewNoteModal';
 
 interface Visit {
   id: string;
@@ -24,6 +25,10 @@ const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState<string | null>(null);
+  const [showEditFormsModal, setShowEditFormsModal] = useState(false);
+  const [editFormsData, setEditFormsData] = useState<{ visitId: string; selectedForms: string[] } | null>(null);
+  const [showViewNoteModal, setShowViewNoteModal] = useState(false);
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!patientId) return;
@@ -55,6 +60,24 @@ const PatientProfile = () => {
     setShowTranscriptModal(true);
   };
 
+  const handleFormSelectionSubmit = (visitId: string, selectedForms: string[]) => {
+    setEditFormsData({ visitId, selectedForms });
+    setShowEditFormsModal(true);
+  };
+
+  const handleSaveForms = (forms: any) => {
+    setVisits((prevVisits) =>
+      prevVisits.map((visit) =>
+        visit.id === editFormsData?.visitId ? { ...visit, forms } : visit
+      )
+    );
+  };
+
+  const openViewNote = (visitId: string) => {
+    setSelectedVisitId(visitId);
+    setShowViewNoteModal(true);
+  };
+
   if (loading) {
     return (
       <div className="w-full max-w-3xl mx-auto p-6">
@@ -75,7 +98,6 @@ const PatientProfile = () => {
             className="w-full mb-4 rounded shadow overflow-hidden"
             style={{ minHeight: '4rem' }}
           >
-
             <div
               className="w-full p-4 bg-gray-100 flex justify-between items-center cursor-pointer text-black"
               onClick={() => toggleVisit(visit.id)}
@@ -102,7 +124,7 @@ const PatientProfile = () => {
 
             {visit.id === currentVisitId && (
               <div className="w-full p-4 bg-gray-700/40">
-                <div className="mb-4">
+                <div className="mb-4 flex space-x-4">
                   <button
                     className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
                     onClick={() => openTranscript(visit.transcript)}
@@ -120,29 +142,38 @@ const PatientProfile = () => {
                         d="M9 12h6m-6 4h6M7 8h10M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    <span className='text-black'>Transcript</span>
+                    <span className="text-black">Transcript</span>
                   </button>
+                  {visit.forms !== null && (
+                    <button
+                      className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
+                      onClick={() => openViewNote(visit.id)}
+                    >
+                      <svg
+                        className="w-6 h-6 text-black"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12h.01M12 15h.01M9 12h.01M12 9h.01M4 12a8 8 0 0116 0 8 8 0 01-16 0z"
+                        />
+                      </svg>
+                      <span className="text-black">View Note</span>
+                    </button>
+                  )}
                 </div>
-                {visit.forms === null ? (
+                {visit.forms === null && (
                   <div>
                     <p className="mb-2">
-                      No forms filled out yet. Select one or more forms to add.
+                      No progress note filled out yet. Generate one below.
                     </p>
-                    {/* Form selection interface goes here */}
-                    <FormSelection onSubmit={(selectedForms) => {
-                      // Here you can call your endpoint(s) for each selected form.
-                      console.log("Selected forms:", selectedForms);
-                    }} />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(visit.forms).map(([formType, formData]) => (
-                      <GeneratedFormDisplay
-                        key={formType}
-                        formType={formType}
-                        data={formData}
-                      />
-                    ))}
+                    <FormSelection
+                      onSubmit={(selectedForms) => handleFormSelectionSubmit(visit.id, selectedForms)}
+                    />
                   </div>
                 )}
               </div>
@@ -151,7 +182,7 @@ const PatientProfile = () => {
         ))
       )}
 
-      {/* Transcript Modal (animated) */}
+      {/* Transcript Modal */}
       <AnimatePresence>
         {showTranscriptModal && selectedTranscript && (
           <motion.div
@@ -162,7 +193,7 @@ const PatientProfile = () => {
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className=" bg-white p-6 rounded shadow-lg max-w-md w-full text-black"
+              className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
@@ -173,13 +204,45 @@ const PatientProfile = () => {
                 <p>{selectedTranscript}</p>
               </div>
               <button
-                className="px-4 py-2 recording-btn"
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
                 onClick={() => setShowTranscriptModal(false)}
               >
                 Close
               </button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Forms Modal */}
+      <AnimatePresence>
+        {showEditFormsModal && editFormsData && patientId && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center bg-black/70"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <EditFormsModal
+              patientId={patientId}
+              visitId={editFormsData.visitId}
+              selectedForms={editFormsData.selectedForms}
+              onClose={() => setShowEditFormsModal(false)}
+              onSave={handleSaveForms}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View Note Modal */}
+      <AnimatePresence>
+        {showViewNoteModal && selectedVisitId && patientId && (
+          <ViewNoteModal
+            patientId={patientId}
+            visitId={selectedVisitId}
+            onClose={() => setShowViewNoteModal(false)}
+          />
         )}
       </AnimatePresence>
     </div>
