@@ -58,7 +58,7 @@ async def extract_form_data(input_data: TranscriptionInput):
                         "properties": {
                             "reason_for_visit": {
                                 "type": "string",
-                                "description": "A concise statement describing the patient’s main concern or symptom that prompted the visit."
+                                "description": "A concise statement describing the patient's main concern or symptom that prompted the visit."
                             },
                             "history_of_present_illness": {
                                 "type": "string",
@@ -130,7 +130,7 @@ async def extract_form_data(input_data: TranscriptionInput):
                             },
                             "follow_up_short": {
                                 "type": "string",
-                                "description": "Quick reference for when/why patient should return (e.g., '2 weeks – suture removal')."
+                                "description": "Quick reference for when/why patient should return (e.g., '2 weeks - suture removal')."
                             },
                             "other_notes": {
                                 "type": "string",
