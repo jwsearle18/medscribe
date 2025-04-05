@@ -82,12 +82,25 @@ class saveTranscription(BaseModel):
 def saveTranscription(transcription: saveTranscription):
     try:
         data = {
-            "patientId": transcription.patientId,
+            "patient_id": transcription.patientId,
             "transcript": transcription.transcript,
             "title": transcription.title,
         }
         # Insert the data into the transcriptions table.
         result = supabase.table("transcriptions").insert(data).execute()
         return result.data[0] if result.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+
+@router.get("/get-patient-data")
+def getPatientData(patient_id: str):
+    try:
+        response = supabase.table("transcriptions")\
+            .select("*")\
+            .eq("patient_id", patient_id)\
+            .order("time_completed", desc=True)\
+            .execute()
+        return response.data
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
