@@ -77,44 +77,40 @@ const availableForms: FormOption[] = [
 ];
 
 const FormSelection: React.FC<FormSelectionProps> = ({ onSubmit }) => {
-  const [selectedForms, setSelectedForms] = useState<string[]>([]);
-
-  const toggleForm = (formId: string) => {
-    setSelectedForms((prev) =>
-      prev.includes(formId)
-        ? prev.filter((id) => id !== formId)
-        : [...prev, formId]
-    );
-  };
-
   const handleSubmit = () => {
-    onSubmit(selectedForms);
+    // Pass all fields for the "New Patient Progress Note"
+    const progressNoteFields = [
+      'reason_for_visit',
+      'history_of_present_illness',
+      'current_medications',
+      'past_medical_history',
+      'surgical_history',
+      'family_history',
+      'allergies',
+      'hospitalizations_major_diagnostics',
+      'review_of_systems',
+      'vital_signs',
+      'examination',
+      'assessments',
+      'procedures',
+      'treatment_plan',
+      'follow_up_detailed',
+      'preventive_medicine',
+      'visit_codes',
+      'procedure_codes',
+      'follow_up_short',
+      'other_notes',
+    ];
+    onSubmit(progressNoteFields);
   };
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Select Forms to Generate</h2>
-      <div className="grid grid-cols-2 gap-4">
-        {availableForms.map((form) => (
-          <button
-            key={form.id}
-            onClick={() => toggleForm(form.id)}
-            className={`flex flex-col items-center justify-center p-4 border rounded-lg transition-all duration-300 
-              ${selectedForms.includes(form.id)
-                ? ' text-white forms-btn-pressed hover:cursor-pointer'
-                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-200 hover:cursor-pointer'
-              }`}
-          >
-            {form.icon}
-            <span className="mt-2 text-sm">{form.label}</span>
-          </button>
-        ))}
-      </div>
       <button
         onClick={handleSubmit}
-        className="mt-4 px-4 py-2 text-white green-btn"
+        className="px-4 py-2 text-white green-btn"
       >
-        Submit Forms
+        Generate New Patient Progress Note
       </button>
     </div>
   );
