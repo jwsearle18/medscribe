@@ -1,7 +1,5 @@
 "use client";
 
-import Image from 'next/image';
-
 export interface FormOption {
   id: string;
   label: string;
