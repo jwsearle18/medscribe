@@ -13,7 +13,7 @@ interface Visit {
   transcript: string;
   title: string;
   time_completed: string;
-  forms: any;
+  forms: Record<string, string>;
 }
 
 const PatientProfile = () => {
@@ -65,7 +65,7 @@ const PatientProfile = () => {
     setShowEditFormsModal(true);
   };
 
-  const handleSaveForms = (forms: any) => {
+  const handleSaveForms = (forms: Record<string, string>) => {
     setVisits((prevVisits) =>
       prevVisits.map((visit) =>
         visit.id === editFormsData?.visitId ? { ...visit, forms } : visit
