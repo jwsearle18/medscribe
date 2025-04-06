@@ -16,11 +16,11 @@ Welcome to our project for the **Beach2Bedside Competition**! This software is d
 This project aims to address the common pain point of time-consuming documentation in healthcare. By automating the note-taking process, doctors can focus more on patient interaction and less on paperwork, ultimately enhancing both efficiency and patient satisfaction.
 
 ## Tech Stack
-- **Frontend**: []
-- **Backend**: []
-- **Speech Recognition**: []
+- **Frontend**: [Next.js, TypeScript]
+- **Backend**: [FastAPI]
+- **Speech-to-Text Transcription**: [DeepGram]
 - **Database**: [SupaBase]
-- **Deployment**: []
+- **Deployment**: [Vercel, Railway]
 
 ## Usage
 1. Visit the website at [your-deployed-URL].
@@ -32,10 +32,10 @@ This project aims to address the common pain point of time-consuming documentati
 This project is a work in progress as part of the Beach2Bedside competition. Key milestones include:
 - [x] Be able to record using the users computer microphone
 - [x] Completing speech-to-text integration
-- [ ] Setup AI note generation based off the session transcription
+- [x] Setup AI note generation based off the session transcription
 - [ ] Refining note generation algorithms
 - [ ] Implementing secure data encryption
-- [ ] Adding export functionality (e.g., PDF, EHR integration)
+- [x] Adding export functionality (e.g., PDF, EHR integration)
 
 ## Team
 - [Spencer Boris] - [Developer]
