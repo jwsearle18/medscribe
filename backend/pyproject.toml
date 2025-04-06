@@ -10,7 +10,10 @@ requires-python = ">=3.11,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.115.11,<0.116.0)",
     "deepgram-sdk (>=3,<4.0)",
-    "supabase (>=2.13.0,<3.0.0)"
+    "supabase (>=2.13.0,<3.0.0)",
+    "openai (>=1.70.0,<2.0.0)",
+    "reportlab (>=4.3.1,<5.0.0)",
+    "pypdf2 (>=3.0.1,<4.0.0)"
 ]
 
 

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.api import router as transcribe_router
+from app.routes.ai import router as ai_router
+from app.routes.pdf import router as pdf_router
 
 app = FastAPI()
 
@@ -17,3 +19,5 @@ def root():
     return {"message": "This is the root"}
 
 app.include_router(transcribe_router)
+app.include_router(ai_router)
+app.include_router(pdf_router)

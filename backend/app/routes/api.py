@@ -82,12 +82,59 @@ class saveTranscription(BaseModel):
 def saveTranscription(transcription: saveTranscription):
     try:
         data = {
-            "patientId": transcription.patientId,
+            "patient_id": transcription.patientId,
             "transcript": transcription.transcript,
             "title": transcription.title,
         }
         # Insert the data into the transcriptions table.
         result = supabase.table("transcriptions").insert(data).execute()
         return result.data[0] if result.data else {}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+
+@router.get("/get-patient-data")
+def getPatientData(patient_id: str):
+    try:
+        response = supabase.table("transcriptions")\
+            .select("*")\
+            .eq("patient_id", patient_id)\
+            .order("time_completed", desc=True)\
+            .execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+class SaveFormDataInput(BaseModel):
+    patient_id: str
+    visit_id: str
+    forms: dict  # JSON data from the frontend
+
+@router.post("/save-form-data")
+def save_form_data(input_data: SaveFormDataInput):
+    try:
+        result = supabase.table("transcriptions")\
+            .update({"forms": input_data.forms})\
+            .eq("id", input_data.visit_id)\
+            .eq("patient_id", input_data.patient_id)\
+            .execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Visit not found")
+        return {"message": "Form data saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+@router.get("/get-form-data")
+def get_form_data(patient_id: str, visit_id: str):
+    try:
+        response = supabase.table("transcriptions")\
+            .select("forms")\
+            .eq("id", visit_id)\
+            .eq("patient_id", patient_id)\
+            .single()\
+            .execute()
+        if not response.data or "forms" not in response.data:
+            raise HTTPException(status_code=404, detail="Form data not found")
+        return response.data["forms"]
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
