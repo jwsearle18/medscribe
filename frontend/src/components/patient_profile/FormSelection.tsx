@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import Image from 'next/image';
 
 export interface FormOption {
@@ -12,69 +11,6 @@ export interface FormOption {
 interface FormSelectionProps {
   onSubmit: (selectedForms: string[]) => void;
 }
-
-const availableForms: FormOption[] = [
-  {
-    id: 'progress_note',
-    label: 'Progress Note',
-    icon: (
-      <Image
-        src="/images/progress_note.svg"
-        alt="Progress Note Icon"
-        width={24}
-        height={24}
-      />
-    ),
-  },
-  // {
-  //   id: 'xray_request',
-  //   label: 'X-Ray',
-  //   icon: (
-  //     <Image
-  //       src="/images/x-ray.svg"
-  //       alt="X-ray Icon"
-  //       width={24}
-  //       height={24}
-  //     />
-  //   ),
-  // },
-  // {
-  //   id: 'medications',
-  //   label: 'Medications',
-  //   icon: (
-  //     <Image
-  //       src="/images/medications.svg"
-  //       alt="Medications Icon"
-  //       width={24}
-  //       height={24}
-  //     />
-  //   ),
-  // },
-  // {
-  //   id: 'referral',
-  //   label: 'Referral',
-  //   icon: (
-  //     <Image
-  //       src="/images/referral.svg"
-  //       alt="Referrals Icon"
-  //       width={24}
-  //       height={24}
-  //     />
-  //   ),
-  // },
-  // {
-  //   id: 'after_visit_summary',
-  //   label: 'After Visit Summary',
-  //   icon: (
-  //     <Image
-  //       src="/images/summary.svg"
-  //       alt="After Visit Summary Icon"
-  //       width={24}
-  //       height={24}
-  //     />
-  //   ),
-  // },
-];
 
 const FormSelection: React.FC<FormSelectionProps> = ({ onSubmit }) => {
   const handleSubmit = () => {

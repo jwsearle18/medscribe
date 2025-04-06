@@ -7,10 +7,10 @@ interface EditFormsModalProps {
   visitId: string;
   selectedForms: string[];
   onClose: () => void;
-  onSave: (forms: any) => void;
+  onSave: (forms: Record<string, string>) => void;
 }
 
-const EditFormsModal = ({ patientId, visitId, selectedForms, onClose, onSave }: EditFormsModalProps) => {
+const EditFormsModal = ({ patientId, visitId, onClose, onSave }: EditFormsModalProps) => {
   const [formData, setFormData] = useState<Record<string, string>>({}); // Explicitly type as string values
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
