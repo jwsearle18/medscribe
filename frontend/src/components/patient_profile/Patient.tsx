@@ -78,6 +78,49 @@ const PatientProfile = () => {
     setShowViewNoteModal(true);
   };
 
+
+
+  const generatePDF = async (visitId: string) => {
+    try {
+      if (!patientId) throw new Error("Patient ID is missing");
+
+      // 1. Fetch the form data using your GET endpoint
+      const formDataRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/get-form-data?patient_id=${patientId}&visit_id=${visitId}`
+      );
+      if (!formDataRes.ok) throw new Error("Failed to fetch form data");
+      const formData = await formDataRes.json();
+
+      // 2. Call the PDF generation endpoint with the JSON data
+      const pdfRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/pdf/generate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+      if (!pdfRes.ok) throw new Error("Failed to generate PDF");
+
+      // 3. Process the PDF response and trigger a download
+      const blob = await pdfRes.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "generated_medical_form.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log("PDF generated and download initiated.");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full max-w-3xl mx-auto p-6">
@@ -165,6 +208,28 @@ const PatientProfile = () => {
                       <span className="text-black">View Note</span>
                     </button>
                   )}
+
+                  {/* New button to call your PDF generation endpoint */}
+                  <button
+                    className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
+                    onClick={() => generatePDF(visit.id)}
+                  >
+                    <svg
+                      className="w-6 h-6 text-black"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
+                      />
+                    </svg>
+                    <span className="text-black">Download</span>
+                  </button>
+                  
                 </div>
                 {visit.forms === null && (
                   <div>

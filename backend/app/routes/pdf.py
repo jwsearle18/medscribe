@@ -3,6 +3,7 @@ from app.utils.pdf_generator import generate_pdf
 from fastapi.responses import FileResponse
 
 router = APIRouter(
+    prefix="/pdf",
     tags=["pdf"]
 )
 

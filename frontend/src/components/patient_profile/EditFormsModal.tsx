@@ -26,7 +26,7 @@ const EditFormsModal = ({ patientId, visitId, selectedForms, onClose, onSave }: 
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/get-patient-data?patient_id=${patientId}`
         );
         const patientData = await patientDataRes.json();
-        const visit = patientData.find((v) => v.id === visitId);
+        const visit = patientData.find((v: { id: string; }) => v.id === visitId);
         if (!visit) throw new Error('Visit not found');
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/ai/extract_form_data`, {

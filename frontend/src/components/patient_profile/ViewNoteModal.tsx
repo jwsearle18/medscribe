@@ -10,7 +10,7 @@ interface ViewNoteModalProps {
 }
 
 const ViewNoteModal = ({ patientId, visitId, onClose }: ViewNoteModalProps) => {
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
