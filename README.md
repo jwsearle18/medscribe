@@ -1,4 +1,4 @@
-# Beach2Bedside: Doctor-Patient Appointment Recorder & Note Generator
+# Bench2Bedside: Doctor-Patient Appointment Recorder & Note Generator
 
 ## Overview
 Welcome to our project for the **Beach2Bedside Competition**! This software is designed to streamline the workflow of healthcare professionals by recording doctor-patient appointments and automatically generating detailed, accurate notes based on the conversation. Our goal is to save doctors time, reduce administrative burden, and improve the quality of patient care documentation.
