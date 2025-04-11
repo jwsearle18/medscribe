@@ -138,3 +138,18 @@ def get_form_data(patient_id: str, visit_id: str):
         return response.data["forms"]
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+@router.get("/search-transcriptions")
+def search_transcriptions(q: str):
+    try:
+        response = supabase.table("transcriptions")\
+            .select("patient_id")\
+            .ilike("patient_id", f"%{q}%")\
+            .limit(10)\
+            .execute()
+        
+        # Deduplicate in case patient_id appears multiple times
+        patient_ids = list({item['patient_id'] for item in response.data})
+        return patient_ids
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
