@@ -1,8 +1,10 @@
 "use client";
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 const Recorder: React.FC = () => {
+  const router = useRouter();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -117,7 +119,7 @@ const Recorder: React.FC = () => {
       const data = await response.json();
       console.log('Transcription saved:', data);
       // Close modal and clear form fields
-      setShowSaveModal(false);
+      router.push(`/patient?patient_id=${encodeURIComponent(patientId)}`);
       setPatientId('');
       setTitle('');
     } catch (error) {
