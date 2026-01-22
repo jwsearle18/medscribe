@@ -1,7 +1,7 @@
 # Bench2Bedside: Doctor-Patient Appointment Recorder & Note Generator
 
 ## Overview
-Welcome to our project for the **Beach2Bedside Competition**! This software is designed to streamline the workflow of healthcare professionals by recording doctor-patient appointments and automatically generating detailed, accurate notes based on the conversation. Our goal is to save doctors time, reduce administrative burden, and improve the quality of patient care documentation.
+Welcome to our project for the **Bench2Bedside Competition**! This software is designed to streamline the workflow of healthcare professionals by recording doctor-patient appointments and automatically generating detailed, accurate notes based on the conversation. Our goal is to save doctors time, reduce administrative burden, and improve the quality of patient care documentation.
 
 ## Features
 - **Audio Recording**: Captures the full doctor-patient conversation with high-quality audio.
@@ -23,25 +23,9 @@ This project aims to address the common pain point of time-consuming documentati
 - **Deployment**: [Vercel, Railway]
 
 ## Usage
-1. Visit the website at [your-deployed-URL].
-2. Start a new recording session during a doctor-patient appointment.
-3. Once the session ends, the software will process the audio and generate a draft note.
-4. Review and edit the note as needed before saving or exporting it.
-
-## Current Status
-This project is a work in progress as part of the Beach2Bedside competition. Key milestones include:
-- [x] Be able to record using the users computer microphone
-- [x] Completing speech-to-text integration
-- [x] Setup AI note generation based off the session transcription
-- [ ] Refining note generation algorithms
-- [ ] Implementing secure data encryption
-- [x] Adding export functionality (e.g., PDF, EHR integration)
-
-## Team
-- [Spencer Boris] - [Developer]
-- [Harrison Oakes] - [Developer]
-- [Tommy Lundquist] - [Product Manager]
-
+1. Start a new recording session during a doctor-patient appointment.
+2. Once the session ends, the software will process the audio and generate a draft note.
+3. Review and edit the note as needed before saving or exporting it.
 
 ## Acknowledgments
 - Thanks to the Beach2Bedside competition organizers for this opportunity.
