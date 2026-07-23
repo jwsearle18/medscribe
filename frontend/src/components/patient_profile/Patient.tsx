@@ -266,7 +266,7 @@ const PatientProfile = () => {
             >
               <h3 className="text-lg font-bold mb-4">Transcript</h3>
               <div className="max-h-96 overflow-y-auto mb-4">
-                <p>{selectedTranscript}</p>
+                <p className="whitespace-pre-line">{selectedTranscript}</p>
               </div>
               <button
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"

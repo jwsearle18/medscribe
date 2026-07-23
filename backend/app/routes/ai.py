@@ -1,19 +1,17 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from openai import OpenAI
+from anthropic import Anthropic
 from typing import Optional
-import json
 import os
-from textwrap import dedent
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize Anthropic client (reads ANTHROPIC_API_KEY from the environment)
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 class TranscriptionInput(BaseModel):
     transcription: str = Field(..., description="The raw transcription of the patient-doctor interaction")
-    model: str = Field(default="gpt-4-turbo-preview", description="OpenAI model to use for analysis")
+    model: str = Field(default="claude-opus-4-8", description="Anthropic model to use for analysis")
 
 class FormOutput(BaseModel):
     reason_for_visit: Optional[str] = None
@@ -40,8 +38,9 @@ class FormOutput(BaseModel):
 @router.post("/extract_form_data", response_model=FormOutput)
 async def extract_form_data(input_data: TranscriptionInput):
     try:
-        response = client.chat.completions.create(
+        response = client.messages.create(
             model=input_data.model,
+            max_tokens=4096,
             messages=[
                 {
                     "role": "user",
@@ -49,11 +48,9 @@ async def extract_form_data(input_data: TranscriptionInput):
                 }
             ],
             tools=[{
-                "type": "function",
-                "function": {
                     "name": "extract_medical_information",
                     "description": "Extract structured documentation from a physician-patient encounter. Return only information relevant to each section.",
-                    "parameters": {
+                    "input_schema": {
                         "type": "object",
                         "properties": {
                             "reason_for_visit": {
@@ -139,18 +136,20 @@ async def extract_form_data(input_data: TranscriptionInput):
                         },
                         "required": []
                     }
-                }
             }],
-            tool_choice={"type": "function", "function": {"name": "extract_medical_information"}}
+            tool_choice={"type": "tool", "name": "extract_medical_information"}
         )
-        
-        # Get the function call response
-        function_response = response.choices[0].message.tool_calls[0].function
-        # Parse the JSON response
-        form_data = json.loads(function_response.arguments)
-        return FormOutput(**form_data)
-        
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail="Failed to parse AI response as JSON")
+
+        # Find the tool_use block Claude returned; its `input` is already a dict
+        tool_use = next(
+            (block for block in response.content if block.type == "tool_use"),
+            None,
+        )
+        if tool_use is None:
+            raise HTTPException(status_code=500, detail="Model did not return structured form data")
+        return FormOutput(**tool_use.input)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))

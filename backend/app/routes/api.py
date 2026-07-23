@@ -24,10 +24,46 @@ if not DEEPGRAM_API_KEY or not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 deepgram = DeepgramClient(DEEPGRAM_API_KEY)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+
+def format_diarized_transcript(alternative: dict) -> str:
+    """
+    Build a speaker-labeled transcript from Deepgram's word-level diarization.
+
+    Deepgram returns speaker *indices* (0, 1, ...) — it doesn't know who the
+    doctor is — so we label turns as "Speaker 0:", "Speaker 1:", etc. If speaker
+    data is unavailable, fall back to the plain transcript.
+    """
+    words = alternative.get("words") or []
+    if not words or "speaker" not in words[0]:
+        return alternative.get("transcript", "")
+
+    lines: list[str] = []
+    current_speaker = None
+    buffer: list[str] = []
+
+    def flush():
+        if buffer:
+            lines.append(f"Speaker {current_speaker}: {' '.join(buffer)}")
+
+    for word in words:
+        speaker = word.get("speaker", 0)
+        token = word.get("punctuated_word") or word.get("word", "")
+        if speaker != current_speaker:
+            flush()
+            current_speaker = speaker
+            buffer = [token]
+        else:
+            buffer.append(token)
+    flush()
+
+    return "\n".join(lines)
+
+
 @router.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
     """
-    Transcribe an uploaded WebM audio file using Deepgram
+    Transcribe an uploaded WebM audio file using Deepgram, with speaker
+    diarization so the two sides of the conversation are separated.
     """
     try:
         # Check if file is WebM
@@ -40,11 +76,13 @@ async def transcribe(file: UploadFile = File(...)):
         # Read the file contents
         audio_data = await file.read()
 
-        # Configure Deepgram options
+        # Configure Deepgram options. diarize=True adds a per-word `speaker`
+        # index so we can reconstruct who said what.
         options = PrerecordedOptions(
             smart_format=True,
             model="nova-2",
-            language="en-US"
+            language="en-US",
+            diarize=True,
         )
 
         # Prepare the audio buffer
@@ -59,11 +97,13 @@ async def transcribe(file: UploadFile = File(...)):
             options
         )
 
-        # Extract the transcript from the response
-        transcript = response['results']['channels'][0]['alternatives'][0]['transcript']
+        # Reconstruct a speaker-labeled transcript from the diarized words.
+        response_dict = response.to_dict()
+        alternative = response_dict['results']['channels'][0]['alternatives'][0]
+        transcript = format_diarized_transcript(alternative)
         return {
              "transcript": transcript,
-             "full_response": response.to_dict()
+             "full_response": response_dict
          }
     except Exception as e:
         raise HTTPException(

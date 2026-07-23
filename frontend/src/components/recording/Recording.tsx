@@ -3,6 +3,22 @@ import React, { useState, useRef, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
+// A canned encounter so reviewers can run the full pipeline
+// (save → generate note → view → PDF) without a microphone or API keys.
+// Mirrors a real diarized Deepgram transcript: speaker-labeled turns.
+const SAMPLE_TRANSCRIPT = [
+  "Speaker 0: Hi, what can I help you with today?",
+  "Speaker 1: I rolled my right ankle playing basketball yesterday. It's swollen and it hurts to put weight on it.",
+  "Speaker 0: Did you hear a pop, and were you able to keep playing?",
+  "Speaker 1: No pop, but I had to stop right away.",
+  "Speaker 0: Any numbness or tingling in the foot?",
+  "Speaker 1: No, just the pain and swelling on the outside of the ankle.",
+  "Speaker 0: Any medications or allergies I should know about?",
+  "Speaker 1: No medications, no allergies.",
+  "Speaker 0: Let me examine it. There's swelling and tenderness over the lateral malleolus, but you can bear a little weight and there's no bony tenderness at the back of the ankle, so an X-ray isn't needed by the Ottawa rules. This is a grade one lateral ankle sprain. I want you to follow RICE, rest, ice twenty minutes at a time, compression wrap, and elevation. Take ibuprofen 400 milligrams every six hours as needed. Start gentle range-of-motion exercises in a couple of days. If you still can't bear weight in a week, come back and we'll image it.",
+  "Speaker 1: Got it, thanks.",
+].join("\n");
+
 const Recorder: React.FC = () => {
   const router = useRouter();
   const [isRecording, setIsRecording] = useState(false);
@@ -158,10 +174,19 @@ const Recorder: React.FC = () => {
         </button>
       </div>
 
+      <div className="mb-6">
+        <button
+          className="text-sm text-gray-500 underline hover:text-gray-300"
+          onClick={() => setTranscript(SAMPLE_TRANSCRIPT)}
+        >
+          No microphone? Load a sample conversation
+        </button>
+      </div>
+
       {transcript && (
         <div className="glass-card p-4 rounded">
           <h2 className="text-xl font-semibold mb-2">Transcription</h2>
-          <p>{transcript}</p>
+          <p className="whitespace-pre-line text-left">{transcript}</p>
           <button
             className="mt-4 px-4 py-2 green-btn"
             onClick={() => setShowSaveModal(true)}
