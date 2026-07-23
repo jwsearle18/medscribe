@@ -1,5 +1,7 @@
 # Bench2Bedside: Doctor-Patient Appointment Recorder & Note Generator
 
+**Live demo:** https://medscribe-sigma.vercel.app — no microphone needed: open patient **DEMO-1001**, or use "Load a sample conversation" to run the full record → transcribe → AI note → PDF pipeline.
+
 ## Overview
 Welcome to our project for the **Bench2Bedside Competition**! This software is designed to streamline the workflow of healthcare professionals by recording doctor-patient appointments and automatically generating detailed, accurate notes based on the conversation. Our goal is to save doctors time, reduce administrative burden, and improve the quality of patient care documentation.
 
