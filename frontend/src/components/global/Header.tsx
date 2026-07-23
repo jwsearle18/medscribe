@@ -50,7 +50,7 @@ const Header: React.FC = () => {
         {/* Logo / Brand Name */}
         <Link href="/">
           <span className="text-xl font-bold text-gray-800 hover:text-gray-600">
-            CodeMed AI
+            MedScribe
           </span>
         </Link>
 
@@ -82,32 +82,6 @@ const Header: React.FC = () => {
                   ))}
                 </ul>
               )}
-            </li>
-
-            {/* Page Navigation Links */}
-            <li>
-              <Link
-                href="/features"
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Features
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/pricing"
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Pricing
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/docs"
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Docs
-              </Link>
             </li>
           </ul>
         </nav>
