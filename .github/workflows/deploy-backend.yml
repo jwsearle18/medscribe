@@ -1,0 +1,78 @@
+name: Deploy backend to Railway
+
+# The Railway backend is not GitHub-connected, and Railway's free tier blocks
+# deploys during peak hours (8 AM - 8 PM America/New_York). This workflow makes
+# backend deploys hands-off anyway:
+#   - on every push to main that touches backend/, it tries to deploy;
+#   - a nightly run (safely after 8 PM ET) deploys anything the peak-hours block
+#     rejected during the day;
+#   - it can also be run on demand from the Actions tab.
+# A peak-hours rejection is treated as a clean skip, not a failure, so a daytime
+# push doesn't send a scary red failure email; the nightly run picks it up.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  schedule:
+    # 01:30 UTC daily = 20:30 ET (EST) / 21:30 ET (EDT) — always past the 8 PM
+    # ET peak-hours window, and well before the 8 AM ET start.
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip nightly run when the backend is unchanged
+        if: github.event_name == 'schedule'
+        run: |
+          CHANGED=$(git log --since="25 hours ago" --name-only --pretty=format: -- backend/ | grep -c . || true)
+          if [ "${CHANGED:-0}" -eq 0 ]; then
+            echo "No backend changes in the last 24h — nothing to deploy."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up Node
+        if: env.SKIP != '1'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Railway CLI
+        if: env.SKIP != '1'
+        run: npm i -g @railway/cli
+
+      - name: Deploy backend
+        if: env.SKIP != '1'
+        working-directory: backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::notice::RAILWAY_TOKEN secret is not set yet — skipping. Add it under repo Settings > Secrets and variables > Actions."
+            exit 0
+          fi
+          set +e
+          railway up --service medscribe-backend --ci 2>&1 | tee deploy.log
+          CODE=${PIPESTATUS[0]}
+          set -e
+          if [ "$CODE" -ne 0 ]; then
+            if grep -qi "peak hours" deploy.log; then
+              echo "::notice::Railway free-tier peak-hours block (8 AM - 8 PM ET). The nightly run after 8 PM ET will deploy this."
+              exit 0
+            fi
+            echo "::error::Railway deploy failed (exit $CODE)."
+            exit "$CODE"
+          fi
+          echo "Backend deployed to Railway."
