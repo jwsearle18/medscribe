@@ -6,8 +6,8 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex flex-col items-center flex-1 bg-slate-800 pt-20 bg-pattern">
-        <Suspense fallback={<div>Loading patient profile...</div>}>
+      <main className="flex flex-col items-center flex-1 bg-bone">
+        <Suspense fallback={<div className="p-10 text-mute">Loading patient profile…</div>}>
           <Patient />
         </Suspense>
       </main>

@@ -4,6 +4,19 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 import os
 
+def field_value(field) -> str:
+    """
+    Return a field's display text.
+
+    Fields are stored either as a plain string (legacy notes) or as a
+    provenance object {value, source, confidence} (current extraction).
+    The PDF only needs the text, so collapse either shape to a string.
+    """
+    if isinstance(field, dict):
+        return str(field.get("value") or "")
+    return str(field or "")
+
+
 def normalize_text(text: str) -> str:
     """
     Replace smart quotes and other unsupported characters with plain ASCII equivalents.
@@ -113,8 +126,9 @@ def generate_pdf(form_data: dict, filename: str):
         c.drawString(50, current_y, field_label + ":")
         current_y -= 20
 
-        # Get text, normalize, and wrap.
-        text = normalize_text(str(form_data.get(field_key, "")))
+        # Get text, normalize, and wrap. Fields may be plain strings (legacy)
+        # or provenance objects {value, source, confidence}.
+        text = normalize_text(field_value(form_data.get(field_key)))
         lines = wrap_text(text, max_width=500, c=c, font_name="Helvetica", font_size=12)
         
         c.setFont("Helvetica", 12)

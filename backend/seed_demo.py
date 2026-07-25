@@ -58,31 +58,113 @@ VISIT_1_TRANSCRIPT = "\n".join([
     "Speaker 1: Sounds good, thank you.",
 ])
 
+# Each field carries its provenance: `value` is the structured text, `source`
+# is the verbatim transcript span that supports it (null when inferred), and
+# `confidence` reflects how directly the transcript backs the value. This is the
+# shape /ai/extract_form_data now returns, and what the note screen renders.
 VISIT_1_FORMS = {
-    "reason_for_visit": "Sore throat and dry nocturnal cough for three days.",
-    "history_of_present_illness": (
-        "3-day history of sore throat with painful swallowing and a dry cough that "
-        "disrupts sleep. Denies measured fever or chills."
-    ),
-    "current_medications": "Lisinopril 10 mg PO daily.",
-    "allergies": "Penicillin (hives).",
-    "review_of_systems": (
-        "Positive for sore throat, odynophagia, and dry cough. Denies fever, "
-        "chills, shortness of breath."
-    ),
-    "vital_signs": "BP 128/80, HR 76, Temp 98.9F.",
-    "examination": (
-        "Oropharynx erythematous with mild tonsillar swelling, no exudate. Lungs "
-        "clear to auscultation bilaterally."
-    ),
-    "assessments": "Acute viral pharyngitis (J02.9).",
-    "treatment_plan": (
-        "Supportive care: rest, warm fluids, ibuprofen 400 mg PO q6h PRN pain. "
-        "Antibiotics withheld given viral presentation and penicillin allergy."
-    ),
-    "follow_up_short": "Return in 1 week if not improving, or sooner if fever >101F.",
-    "visit_codes": "99213",
-    "other_notes": "Penicillin allergy reviewed with patient and avoided.",
+    "reason_for_visit": {
+        "value": "Sore throat and dry nocturnal cough for three days.",
+        "source": (
+            "Speaker 1: I've had a really sore throat for about three days now, "
+            "and a dry cough that keeps me up at night."
+        ),
+        "confidence": "high",
+    },
+    "history_of_present_illness": {
+        "value": (
+            "3-day history of sore throat with painful swallowing and a dry cough "
+            "that disrupts sleep. Denies measured fever or chills."
+        ),
+        "source": (
+            "Speaker 1: No fever that I've measured, but swallowing is pretty "
+            "painful. No chills."
+        ),
+        "confidence": "high",
+    },
+    "current_medications": {
+        "value": "Lisinopril 10 mg PO daily.",
+        "source": (
+            "Speaker 1: I take lisinopril 10 milligrams daily for blood pressure, "
+            "nothing else."
+        ),
+        "confidence": "high",
+    },
+    "allergies": {
+        "value": "Penicillin (hives).",
+        "source": "Speaker 1: I'm allergic to penicillin, it gives me hives.",
+        "confidence": "high",
+    },
+    "review_of_systems": {
+        "value": (
+            "Positive for sore throat, odynophagia, and dry cough. Denies fever, "
+            "chills, shortness of breath."
+        ),
+        "source": (
+            "Speaker 1: No fever that I've measured, but swallowing is pretty "
+            "painful. No chills."
+        ),
+        "confidence": "medium",
+    },
+    "vital_signs": {
+        "value": "BP 128/80, HR 76, Temp 98.9F.",
+        "source": (
+            "Speaker 0: Blood pressure today is 128 over 80, temperature 98.9, "
+            "heart rate 76."
+        ),
+        "confidence": "high",
+    },
+    "examination": {
+        "value": (
+            "Oropharynx erythematous with mild tonsillar swelling, no exudate. "
+            "Lungs clear to auscultation bilaterally."
+        ),
+        "source": (
+            "Speaker 0: Your throat is red with some swelling, no pus on the "
+            "tonsils. Lungs are clear."
+        ),
+        "confidence": "high",
+    },
+    "assessments": {
+        "value": "Acute viral pharyngitis (J02.9).",
+        "source": "Speaker 0: This looks like acute viral pharyngitis.",
+        # The ICD-10 code J02.9 was supplied by the model, not stated aloud.
+        "confidence": "low",
+    },
+    "treatment_plan": {
+        "value": (
+            "Supportive care: rest, warm fluids, ibuprofen 400 mg PO q6h PRN pain. "
+            "Antibiotics withheld given viral presentation and penicillin allergy."
+        ),
+        "source": (
+            "Speaker 0: I'd recommend rest, warm fluids, and ibuprofen 400 "
+            "milligrams every six hours as needed for the pain. Since you're "
+            "allergic to penicillin we'll avoid that entirely."
+        ),
+        "confidence": "high",
+    },
+    "follow_up_short": {
+        "value": "Return in 1 week if not improving, or sooner if fever >101F.",
+        "source": (
+            "Speaker 0: If it isn't improving in a week, or you develop a fever "
+            "above 101, come back in."
+        ),
+        "confidence": "high",
+    },
+    "visit_codes": {
+        "value": "99213",
+        # E/M level inferred from visit complexity, never stated in the room.
+        "source": None,
+        "confidence": "low",
+    },
+    "other_notes": {
+        "value": "Penicillin allergy reviewed with patient and avoided.",
+        "source": (
+            "Speaker 0: Since you're allergic to penicillin we'll avoid that "
+            "entirely."
+        ),
+        "confidence": "medium",
+    },
 }
 
 # --- Visit 2: encounter with no note yet (reviewer can generate it live) ------

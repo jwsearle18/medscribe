@@ -1,49 +1,67 @@
 "use client";
 
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import FormSelection from './FormSelection';
-import EditFormsModal from './EditFormsModal';
-import ViewNoteModal from './ViewNoteModal';
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowDownTrayIcon,
+  ChevronDownIcon,
+  DocumentTextIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
+import {
+  FIELD_LABELS,
+  FOOTER_FIELD,
+  SECTIONS,
+  hasContent,
+  normalizeField,
+  type Forms,
+  type NoteField as NoteFieldModel,
+  type Visit,
+} from "../../lib/note";
+import NoteField from "./NoteField";
+import AllergyBanner from "./AllergyBanner";
+import TranscriptPanel from "./TranscriptPanel";
 
-interface Visit {
-  id: string;
-  patient_id: string;
-  transcript: string;
-  title: string;
-  time_completed: string;
-  forms: Record<string, string>;
-}
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+// Local, un-persisted edits and confirmations, keyed by visit then field. Edits
+// to an existing note stay in the browser so the shared demo record stays
+// pristine for the next viewer; the download reflects them.
+type Override = { value?: string; verified?: boolean };
+type Overrides = Record<string, Record<string, Override>>;
 
 const PatientProfile = () => {
   const searchParams = useSearchParams();
-  const patientId = searchParams.get('patient_id');
+  const patientId = searchParams.get("patient_id");
 
   const [visits, setVisits] = useState<Visit[]>([]);
   const [currentVisitId, setCurrentVisitId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
-  const [selectedTranscript, setSelectedTranscript] = useState<string | null>(null);
-  const [showEditFormsModal, setShowEditFormsModal] = useState(false);
-  const [editFormsData, setEditFormsData] = useState<{ visitId: string; selectedForms: string[] } | null>(null);
-  const [showViewNoteModal, setShowViewNoteModal] = useState(false);
-  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [overrides, setOverrides] = useState<Overrides>({});
+  const [generated, setGenerated] = useState<Record<string, Forms>>({});
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!patientId) return;
     const fetchPatientData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/get-patient-data?patient_id=${patientId}`
-        );
-        if (!res.ok) throw new Error('Failed to fetch patient data');
-        const data = await res.json();
+        setError(null);
+        const res = await fetch(`${BACKEND}/api/get-patient-data?patient_id=${patientId}`);
+        if (!res.ok) throw new Error("Failed to load patient data");
+        const data: Visit[] = await res.json();
         setVisits(data);
         if (data.length > 0) setCurrentVisitId(data[0].id);
-      } catch (error) {
-        console.error('Fetch error:', error);
+      } catch (err) {
+        setError((err as Error).message);
       } finally {
         setLoading(false);
       }
@@ -51,267 +69,366 @@ const PatientProfile = () => {
     fetchPatientData();
   }, [patientId]);
 
-  const toggleVisit = (visitId: string) => {
-    setCurrentVisitId(currentVisitId === visitId ? null : visitId);
+  const currentVisit = useMemo(
+    () => visits.find((v) => v.id === currentVisitId) ?? null,
+    [visits, currentVisitId],
+  );
+
+  // The forms actually shown: a freshly generated (unsaved) note wins over the
+  // stored one for a not-yet-documented visit.
+  const effectiveForms: Forms = currentVisit
+    ? generated[currentVisit.id] ?? currentVisit.forms
+    : null;
+
+  // Resolve a stored field through any local edit/confirm.
+  const resolveField = (fieldKey: string, raw: unknown): NoteFieldModel => {
+    const base = normalizeField(raw as never);
+    const ov = currentVisit ? overrides[currentVisit.id]?.[fieldKey] : undefined;
+    if (!ov) return base;
+    return {
+      ...base,
+      value: ov.value ?? base.value,
+      verified: ov.verified ?? base.verified,
+    };
   };
 
-  const openTranscript = (transcript: string) => {
-    setSelectedTranscript(transcript);
-    setShowTranscriptModal(true);
+  const setOverride = (fieldKey: string, patch: Override) => {
+    if (!currentVisit) return;
+    setOverrides((prev) => ({
+      ...prev,
+      [currentVisit.id]: {
+        ...prev[currentVisit.id],
+        [fieldKey]: { ...prev[currentVisit.id]?.[fieldKey], ...patch },
+      },
+    }));
   };
 
-  const handleFormSelectionSubmit = (visitId: string, selectedForms: string[]) => {
-    setEditFormsData({ visitId, selectedForms });
-    setShowEditFormsModal(true);
+  const openTranscript = (source: string | null) => {
+    setHighlight(source);
+    setTranscriptOpen(true);
   };
 
-  const handleSaveForms = (forms: Record<string, string>) => {
-    setVisits((prevVisits) =>
-      prevVisits.map((visit) =>
-        visit.id === editFormsData?.visitId ? { ...visit, forms } : visit
-      )
-    );
-  };
-
-  const openViewNote = (visitId: string) => {
-    setSelectedVisitId(visitId);
-    setShowViewNoteModal(true);
-  };
-
-
-
-  const generatePDF = async (visitId: string) => {
+  const handleGenerate = async () => {
+    if (!currentVisit) return;
     try {
-      if (!patientId) throw new Error("Patient ID is missing");
+      setGenError(null);
+      setGenerating(currentVisit.id);
+      const res = await fetch(`${BACKEND}/ai/extract_form_data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcription: currentVisit.transcript }),
+      });
+      if (!res.ok) throw new Error("The note could not be generated. Try again.");
+      const forms: Forms = await res.json();
+      setGenerated((prev) => ({ ...prev, [currentVisit.id]: forms }));
+    } catch (err) {
+      setGenError((err as Error).message);
+    } finally {
+      setGenerating(null);
+    }
+  };
 
-      // 1. Fetch the form data using your GET endpoint
-      const formDataRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/get-form-data?patient_id=${patientId}&visit_id=${visitId}`
-      );
-      if (!formDataRes.ok) throw new Error("Failed to fetch form data");
-      const formData = await formDataRes.json();
-
-      // 2. Call the PDF generation endpoint with the JSON data
-      const pdfRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/pdf/generate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-      if (!pdfRes.ok) throw new Error("Failed to generate PDF");
-
-      // 3. Process the PDF response and trigger a download
-      const blob = await pdfRes.blob();
+  const handleDownload = async () => {
+    if (!currentVisit || !effectiveForms) return;
+    try {
+      setDownloading(true);
+      // Send the effective (edited) values so the PDF matches what's on screen.
+      const flat: Record<string, string> = {};
+      for (const key of Object.keys(effectiveForms)) {
+        flat[key] = resolveField(key, effectiveForms[key]).value;
+      }
+      const res = await fetch(`${BACKEND}/pdf/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(flat),
+      });
+      if (!res.ok) throw new Error("PDF generation failed");
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "generated_medical_form.pdf";
+      link.download = `${patientId ?? "patient"}-note.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      console.log("PDF generated and download initiated.");
-    } catch (error) {
-      console.error("Error generating PDF:", error);
+    } catch (err) {
+      setGenError((err as Error).message);
+    } finally {
+      setDownloading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="w-full max-w-3xl mx-auto p-6">
-        <p>Loading patient data...</p>
+      <div className="w-full max-w-3xl px-6 py-10">
+        <NoteSkeleton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-3xl px-6 py-16 text-center">
+        <p className="text-ink">{error}</p>
+        <p className="mt-1 text-sm text-mute">Patient {patientId}</p>
+      </div>
+    );
+  }
+
+  if (!currentVisit) {
+    return (
+      <div className="w-full max-w-3xl px-6 py-16 text-center">
+        <p className="text-ink">No visits found for patient {patientId}.</p>
+      </div>
+    );
+  }
+
+  const visitDate = new Date(currentVisit.time_completed);
+
+  return (
+    <div className="w-full max-w-3xl px-6 py-8">
+      {/* Visit header: patient identity + visit switcher + actions */}
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-4">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <h1 className="font-serif text-[1.75rem] leading-tight tracking-[-0.01em] text-ink">
+              {patientId}
+            </h1>
+          </div>
+
+          {/* Visit switcher */}
+          <div className="relative mt-1">
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen((o) => !o)}
+              aria-expanded={switcherOpen}
+              className="focus-ring flex items-center gap-1.5 rounded-sm text-left text-graphite hover:text-ink"
+            >
+              <span className="text-[0.9375rem]">{currentVisit.title}</span>
+              <span className="text-mute">·</span>
+              <span className="text-[0.8125rem] text-mute">
+                {visitDate.toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+              {visits.length > 1 && <ChevronDownIcon className="h-3.5 w-3.5 text-mute" />}
+            </button>
+
+            {switcherOpen && visits.length > 1 && (
+              <ul className="overlay-shadow absolute left-0 top-8 z-30 w-80 max-w-[80vw] overflow-hidden rounded-md border border-rule bg-bone py-1">
+                {visits.map((v) => {
+                  const documented = !!(generated[v.id] ?? v.forms);
+                  return (
+                    <li key={v.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentVisitId(v.id);
+                          setSwitcherOpen(false);
+                        }}
+                        className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-chart ${
+                          v.id === currentVisit.id ? "bg-chart" : ""
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-[0.875rem] text-ink">{v.title}</span>
+                          <span className="block text-[0.75rem] text-mute">
+                            {new Date(v.time_completed).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </span>
+                        {!documented && (
+                          <span className="flex-shrink-0 rounded-sm bg-caution-surface px-1.5 py-px text-[0.625rem] font-semibold uppercase tracking-wide text-caution">
+                            No note
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => openTranscript(null)}
+            className="focus-ring inline-flex items-center gap-1.5 rounded-md border border-rule bg-transparent px-3 py-1.5 text-[0.875rem] font-medium text-ink hover:bg-chart"
+          >
+            <DocumentTextIcon className="h-4 w-4" />
+            Transcript
+          </button>
+          {effectiveForms && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="focus-ring inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[0.875rem] font-semibold text-bone hover:bg-graphite disabled:opacity-60"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              {downloading ? "Preparing…" : "Download"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Note body, or the generate affordance for an undocumented visit */}
+      {effectiveForms ? (
+        <Note
+          forms={effectiveForms}
+          resolveField={resolveField}
+          onEdit={(k, value) => setOverride(k, { value, verified: true })}
+          onVerify={(k) => setOverride(k, { verified: true })}
+          onLocate={openTranscript}
+        />
+      ) : (
+        <EmptyNote
+          generating={generating === currentVisit.id}
+          error={genError}
+          onGenerate={handleGenerate}
+        />
+      )}
+
+      <TranscriptPanel
+        open={transcriptOpen}
+        transcript={currentVisit.transcript}
+        highlight={highlight}
+        onClose={() => setTranscriptOpen(false)}
+      />
+    </div>
+  );
+};
+
+// --- Note body ---------------------------------------------------------------
+
+interface NoteProps {
+  forms: NonNullable<Forms>;
+  resolveField: (fieldKey: string, raw: unknown) => NoteFieldModel;
+  onEdit: (fieldKey: string, value: string) => void;
+  onVerify: (fieldKey: string) => void;
+  onLocate: (source: string | null) => void;
+}
+
+function Note({ forms, resolveField, onEdit, onVerify, onLocate }: NoteProps) {
+  const allergy = "allergies" in forms ? resolveField("allergies", forms.allergies) : null;
+  const footerRaw = FOOTER_FIELD in forms ? resolveField(FOOTER_FIELD, forms[FOOTER_FIELD]) : null;
+
+  return (
+    <div className="pt-5">
+      {allergy && hasContent(allergy) && (
+        <div className="mb-6">
+          <AllergyBanner field={allergy} onLocate={(s) => onLocate(s)} />
+        </div>
+      )}
+
+      {SECTIONS.map((section) => {
+        const present = section.fields
+          .filter((key) => key in forms)
+          .map((key) => ({ key, field: resolveField(key, forms[key]) }))
+          .filter(({ field }) => hasContent(field));
+        if (present.length === 0) return null;
+
+        return (
+          <section key={section.id} className="mb-7">
+            <h2 className="mb-1 border-b border-rule pb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.09em] text-graphite">
+              {section.label}
+            </h2>
+            <div className="divide-y divide-rule">
+              {present.map(({ key, field }) => (
+                <NoteField
+                  key={key}
+                  fieldKey={key}
+                  label={FIELD_LABELS[key] ?? key}
+                  field={field}
+                  onEdit={(value) => onEdit(key, value)}
+                  onVerify={() => onVerify(key)}
+                  onLocate={(s) => onLocate(s)}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
+      {footerRaw && hasContent(footerRaw) && (
+        <p className="mt-6 border-t border-rule pt-4 text-[0.8125rem] italic leading-relaxed text-mute">
+          {footerRaw.value}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// --- Empty / generate state --------------------------------------------------
+
+interface EmptyNoteProps {
+  generating: boolean;
+  error: string | null;
+  onGenerate: () => void;
+}
+
+function EmptyNote({ generating, error, onGenerate }: EmptyNoteProps) {
+  if (generating) {
+    return (
+      <div className="pt-5">
+        <div className="mb-6 flex items-center gap-2.5 text-graphite">
+          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-rule border-t-ink" />
+          <span className="text-[0.875rem]">Reading the transcript and drafting the note…</span>
+        </div>
+        <NoteSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-4">Patient Profile</h1>
-      {visits.length === 0 ? (
-        <p>No visits found for patient: {patientId}</p>
-      ) : (
-        visits.map((visit) => (
-          <div
-            key={visit.id}
-            className="w-full mb-4 rounded shadow overflow-hidden"
-            style={{ minHeight: '4rem' }}
-          >
-            <div
-              className="w-full p-4 bg-gray-100 flex justify-between items-center cursor-pointer text-black"
-              onClick={() => toggleVisit(visit.id)}
-            >
-              <div className="w-full overflow-hidden">
-                <h2 className="text-xl truncate">{visit.title}</h2>
-                <p className="text-sm text-gray-600 break-words">
-                  {new Date(visit.time_completed).toLocaleString()}
-                </p>
-              </div>
-              <div className="ml-2 flex-shrink-0">
-                <svg
-                  className={`w-5 h-5 text-gray-700 transition-transform duration-300 ${
-                    visit.id === currentVisitId ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-
-            {visit.id === currentVisitId && (
-              <div className="w-full p-4 bg-gray-700/40">
-                <div className="mb-4 flex space-x-4">
-                  <button
-                    className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
-                    onClick={() => openTranscript(visit.transcript)}
-                  >
-                    <svg
-                      className="w-6 h-6 text-black"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6M7 8h10M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    <span className="text-black">Transcript</span>
-                  </button>
-                  {visit.forms !== null && (
-                    <button
-                      className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
-                      onClick={() => openViewNote(visit.id)}
-                    >
-                      <svg
-                        className="w-6 h-6 text-black"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12h.01M12 15h.01M9 12h.01M12 9h.01M4 12a8 8 0 0116 0 8 8 0 01-16 0z"
-                        />
-                      </svg>
-                      <span className="text-black">View Note</span>
-                    </button>
-                  )}
-
-                  {/* New button to call your PDF generation endpoint */}
-                  <button
-                    className="flex items-center space-x-2 p-2 rounded shadow bg-white hover:bg-gray-200 hover:cursor-pointer"
-                    onClick={() => generatePDF(visit.id)}
-                  >
-                    <svg
-                      className="w-6 h-6 text-black"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
-                      />
-                    </svg>
-                    <span className="text-black">Download</span>
-                  </button>
-                  
-                </div>
-                {visit.forms === null && (
-                  <div>
-                    <p className="mb-2">
-                      No progress note filled out yet. Generate one below.
-                    </p>
-                    <FormSelection
-                      onSubmit={(selectedForms) => handleFormSelectionSubmit(visit.id, selectedForms)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))
-      )}
-
-      {/* Transcript Modal */}
-      <AnimatePresence>
-        {showTranscriptModal && selectedTranscript && (
-          <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/70"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.div
-              className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black"
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 50, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            >
-              <h3 className="text-lg font-bold mb-4">Transcript</h3>
-              <div className="max-h-96 overflow-y-auto mb-4">
-                <p className="whitespace-pre-line">{selectedTranscript}</p>
-              </div>
-              <button
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                onClick={() => setShowTranscriptModal(false)}
-              >
-                Close
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Edit Forms Modal */}
-      <AnimatePresence>
-        {showEditFormsModal && editFormsData && patientId && (
-          <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/70"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <EditFormsModal
-              patientId={patientId}
-              visitId={editFormsData.visitId}
-              selectedForms={editFormsData.selectedForms}
-              onClose={() => setShowEditFormsModal(false)}
-              onSave={handleSaveForms}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* View Note Modal */}
-      <AnimatePresence>
-        {showViewNoteModal && selectedVisitId && patientId && (
-          <ViewNoteModal
-            patientId={patientId}
-            visitId={selectedVisitId}
-            onClose={() => setShowViewNoteModal(false)}
-          />
-        )}
-      </AnimatePresence>
+    <div className="pt-12 pb-8 text-center">
+      <p className="text-[0.9375rem] text-graphite">No note has been generated for this visit.</p>
+      <p className="mx-auto mt-1 max-w-sm text-[0.8125rem] text-mute">
+        MedScribe reads the encounter transcript and drafts a structured note, with every field
+        traceable back to what was said.
+      </p>
+      <button
+        type="button"
+        onClick={onGenerate}
+        className="focus-ring mt-5 inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-[0.9375rem] font-semibold text-bone hover:bg-graphite"
+      >
+        <SparklesIcon className="h-4 w-4" />
+        Generate note
+      </button>
+      {error && <p className="mt-3 text-[0.8125rem] text-alert">{error}</p>}
     </div>
   );
-};
+}
+
+// --- Skeleton ----------------------------------------------------------------
+
+function NoteSkeleton() {
+  return (
+    <div className="space-y-6" aria-hidden="true">
+      {[3, 2, 1].map((rows, s) => (
+        <div key={s}>
+          <div className="mb-3 h-2.5 w-24 rounded bg-rule" />
+          <div className="space-y-3">
+            {Array.from({ length: rows }).map((_, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="h-2 w-28 rounded bg-chart" />
+                <div className="h-3 w-full rounded bg-chart" />
+                <div className="h-3 w-4/5 rounded bg-chart" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default PatientProfile;

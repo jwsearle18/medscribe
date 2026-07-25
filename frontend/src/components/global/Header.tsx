@@ -45,45 +45,41 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b shadow-sm">
-      <div className="mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo / Brand Name */}
-        <Link href="/">
-          <span className="text-xl font-bold text-gray-800 hover:text-gray-600">
+    <header className="bg-bone border-b border-rule">
+      <div className="mx-auto max-w-6xl px-6 py-3.5 flex items-center justify-between">
+        {/* Brand: the serif signals a record about a person. */}
+        <Link href="/" className="focus-ring rounded-sm">
+          <span className="font-serif text-[1.35rem] leading-none tracking-[-0.01em] text-ink hover:text-graphite transition-colors">
             MedScribe
           </span>
         </Link>
 
-        {/* Navigation */}
+        {/* Patient search */}
         <nav>
-          <ul className="flex space-x-6">
-            {/* Search Bar */}
-            <li className="relative">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-black pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search Patient"
-                    className="border-2 border-black rounded-full pl-6 px-3 text-black placeholder-black focus:outline-none focus:border-black"
-                    value={query}
-                    onChange={handleInputChange}
-                  />
-              </div>
-              {showDropdown && suggestions.length > 0 && (
-                <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto px-1">
-                  {suggestions.map((item, idx) => (
-                    <li
-                      key={idx}
-                      onClick={() => handleSelect(item)}
-                      className="px-2 py-2 cursor-pointer hover:bg-gray-100 text-sm text-black"
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          </ul>
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-mute pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search patient"
+              aria-label="Search patient by ID"
+              className="focus-ring w-56 rounded-md border border-rule bg-bone py-1.5 pl-8 pr-3 text-[0.9375rem] text-ink placeholder-mute focus:border-ink"
+              value={query}
+              onChange={handleInputChange}
+            />
+            {showDropdown && suggestions.length > 0 && (
+              <ul className="overlay-shadow absolute z-50 mt-1.5 w-full overflow-hidden rounded-md border border-rule bg-bone">
+                {suggestions.map((item, idx) => (
+                  <li
+                    key={idx}
+                    onClick={() => handleSelect(item)}
+                    className="cursor-pointer px-3 py-2 text-sm text-ink hover:bg-chart"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </nav>
       </div>
     </header>

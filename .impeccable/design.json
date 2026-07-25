@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-24T00:00:00Z",
+  "title": "Design System: MedScribe",
+  "extensions": {
+    "colorMeta": {
+      "bone":            { "role": "neutral",   "displayName": "Bone",            "canonical": "oklch(97.5% 0.006 75)", "tonalRamp": ["#211c17","#3a352f","#5c5752","#78746e","#a09b95","#c2bdb7","#dbd7d1","#f0ece7"] },
+      "chart":           { "role": "neutral",   "displayName": "Chart",           "canonical": "oklch(94.6% 0.008 75)", "tonalRamp": ["#211c17","#3a352f","#5c5752","#78746e","#a09b95","#c2bdb7","#dbd7d1","#f0ece7"] },
+      "ink":             { "role": "primary",   "displayName": "Ink",             "canonical": "oklch(23% 0.012 70)",   "tonalRamp": ["#211c17","#332e28","#4a4540","#5c5752","#78746e","#9a958f","#c2bdb7","#e6e2dc"] },
+      "graphite":        { "role": "neutral",   "displayName": "Graphite",        "canonical": "oklch(46% 0.011 70)",   "tonalRamp": ["#211c17","#3a352f","#5c5752","#78746e","#a09b95","#c2bdb7","#dbd7d1","#f0ece7"] },
+      "mute":            { "role": "neutral",   "displayName": "Mute",            "canonical": "oklch(52% 0.01 70)",    "tonalRamp": ["#211c17","#3a352f","#5c5752","#6d6863","#8f8a84","#b3aea8","#d4cfc9","#f0ece7"] },
+      "rule":            { "role": "neutral",   "displayName": "Rule",            "canonical": "oklch(88% 0.009 75)",   "tonalRamp": ["#211c17","#3a352f","#5c5752","#78746e","#a09b95","#c2bdb7","#dbd7d1","#f0ece7"] },
+      "alert":           { "role": "tertiary",  "displayName": "Alert Red",       "canonical": "oklch(52% 0.185 27)",   "tonalRamp": ["#3a0d0c","#5c1513","#7f1d1a","#a12220","#bc2826","#d75f5c","#ee9c99","#ffe7e4"] },
+      "caution":         { "role": "tertiary",  "displayName": "Caution Amber",   "canonical": "oklch(50.5% 0.12 68)",  "tonalRamp": ["#2e1a00","#4a2c00","#663d00","#7d4b00","#905500","#b57530","#e0a866","#feedd7"] },
+      "verified":        { "role": "secondary", "displayName": "Verified Green",  "canonical": "oklch(50% 0.095 155)",  "tonalRamp": ["#0d2e1b","#14472a","#1d5f39","#276647","#2e734b","#57997018","#8fc0a4","#e0f5e6"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Patient name and note title only. The one serif." },
+      "title":   { "displayName": "Title",   "purpose": "Section and panel headings." },
+      "body":    { "displayName": "Body",    "purpose": "Note content and field values." },
+      "label":   { "displayName": "Label",   "purpose": "Uppercase field labels and column headers." },
+      "mono":    { "displayName": "Mono",    "purpose": "Verbatim transcript excerpts and identifiers." }
+    },
+    "shadows": [
+      { "name": "overlay", "value": "0 8px 24px -8px rgba(33,28,23,0.18), 0 2px 6px -2px rgba(33,28,23,0.12)", "purpose": "Transient overlays only: popovers, dropdowns, command palette. Nothing persistent casts a shadow." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "duration-state", "value": "180ms", "purpose": "Standard state-change transition; range 150-250ms." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Highest-emphasis action. Dark fill, no hue; emphasis comes from darkness, not color.",
+      "html": "<button class=\"ds-btn-primary\">Generate note</button>",
+      "css": ".ds-btn-primary { background: #211c17; color: #f9f6f2; font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.006em; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; transition: background 180ms cubic-bezier(0.25,1,0.5,1); } .ds-btn-primary:hover { background: #5c5752; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #f9f6f2, 0 0 0 4px #211c17; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary and tertiary actions. Hairline border, fills to Chart on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Load sample</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #211c17; font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; font-weight: 500; padding: 8px 16px; border: 1px solid #dbd7d1; border-radius: 5px; cursor: pointer; transition: background 180ms cubic-bezier(0.25,1,0.5,1), border-color 180ms; } .ds-btn-ghost:hover { background: #f0ece7; border-color: #c2bdb7; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #f9f6f2, 0 0 0 4px #211c17; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Patient search. Hairline border, warm surface, Ink focus ring, no accent hue.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search patient\" />",
+      "css": ".ds-input { background: #f9f6f2; color: #211c17; font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; padding: 8px 10px; border: 1px solid #dbd7d1; border-radius: 5px; width: 220px; } .ds-input::placeholder { color: #6d6863; } .ds-input:focus-visible { outline: none; border-color: #211c17; box-shadow: 0 0 0 2px #211c17; }"
+    },
+    {
+      "name": "Note Field",
+      "kind": "custom",
+      "refersTo": "field",
+      "description": "The signature component. A structured note field at rest: uppercase label, Body value, hairline divider. Not boxed like a form input.",
+      "html": "<div class=\"ds-field\"><span class=\"ds-field-label\">Chief complaint</span><span class=\"ds-field-value\">Right ankle pain after inversion injury, 2 days ago.</span></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 3px; padding: 12px 0; border-bottom: 1px solid #dbd7d1; max-width: 640px; } .ds-field-label { font-family: 'Inter', system-ui, sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #5c5752; } .ds-field-value { font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.55; color: #211c17; }"
+    },
+    {
+      "name": "Caution Field",
+      "kind": "custom",
+      "refersTo": "field",
+      "description": "A low-confidence extraction. The one permitted colored left edge, because here the edge is clinical data. Color paired with a text label.",
+      "html": "<div class=\"ds-field-caution\"><div class=\"ds-field-head\"><span class=\"ds-field-label\">Dosage</span><span class=\"ds-chip-caution\">Review</span></div><span class=\"ds-field-value\">Ibuprofen 600mg (inferred; not stated explicitly)</span></div>",
+      "css": ".ds-field-caution { display: flex; flex-direction: column; gap: 3px; padding: 12px 0 12px 12px; border-left: 2px solid #905500; max-width: 640px; } .ds-field-head { display: flex; align-items: center; gap: 8px; } .ds-field-label { font-family: 'Inter', system-ui, sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #5c5752; } .ds-field-value { font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.55; color: #211c17; } .ds-chip-caution { font-family: 'Inter', system-ui, sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #905500; background: #feedd7; padding: 1px 6px; border-radius: 3px; }"
+    },
+    {
+      "name": "Verified Chip",
+      "kind": "chip",
+      "refersTo": "chip-verified",
+      "description": "Read-only status signal for a clinician-confirmed field. Surface + matching foreground, text carries the meaning.",
+      "html": "<span class=\"ds-chip-verified\">Verified</span>",
+      "css": ".ds-chip-verified { display: inline-flex; align-items: center; gap: 4px; font-family: 'Inter', system-ui, sans-serif; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #2e734b; background: #e0f5e6; padding: 1px 6px; border-radius: 3px; }"
+    },
+    {
+      "name": "Allergy Alert",
+      "kind": "custom",
+      "refersTo": "field",
+      "description": "The loudest, rarest signal. Allergies and contraindications. Alert surface with an icon plus text; never color alone.",
+      "html": "<div class=\"ds-alert\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#bc2826\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"13\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/></svg><span class=\"ds-alert-text\"><strong>Allergy:</strong> Penicillin (anaphylaxis)</span></div>",
+      "css": ".ds-alert { display: inline-flex; align-items: center; gap: 8px; background: #ffe7e4; padding: 8px 12px; border-radius: 5px; max-width: 640px; } .ds-alert-text { font-family: 'Inter', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.4; color: #211c17; } .ds-alert-text strong { color: #bc2826; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Attending's Chart",
+    "overview": "A warm off-white paper chart rebuilt as fast software. The surface is quiet, warm, and achromatic; color is not decoration and never sets a mood; color is a clinical signal with a fixed vocabulary of three meanings. Dense the way a well-set page is dense, through typographic hierarchy and spacing rhythm, never through shrinking. It borrows Linear's discipline but not its palette or its dark chrome: light because a clinician reads it in a bright room, warm because cold grey is the color of the EHR it replaces.",
+    "keyCharacteristics": [
+      "Light, warm, achromatic canvas; the only color is clinical meaning.",
+      "A serif for the patient's name and the note's identity; a sans for everything operational.",
+      "Density earned through hierarchy and rhythm, not compression.",
+      "Structure carried by hairline rules and tonal layers, not shadows or cards.",
+      "Every generated claim is visibly traceable back to what was said."
+    ],
+    "rules": [
+      { "name": "The Clinical Color Rule", "body": "Saturated color appears on screen if and only if it carries one of three fixed meanings: Alert, Caution, Verified. No fourth color, no decorative use. A screen at rest is entirely warm-neutral; any hue is information.", "section": "colors" },
+      { "name": "The Warm Neutral Rule", "body": "Every neutral is tinted toward hue 70-75. Pure #000, pure #fff, and any cold blue-grey are forbidden. Cold grey is the color of the incumbent EHR.", "section": "colors" },
+      { "name": "The Serif-Is-Sacred Rule", "body": "Newsreader appears only for the patient's name and the note's title. Every additional serif dilutes the one signal it carries: this record is about a person.", "section": "typography" },
+      { "name": "The Label-Is-Not-Loud Rule", "body": "Field labels earn distinction through uppercase and letter-spacing at 11px in Graphite, not size or heavy weight. Labels recede; the clinical values are what the eye lands on.", "section": "typography" },
+      { "name": "The No-Card Rule", "body": "Content is organized by tonal layer and hairline rule, not rounded floating cards with shadows. Use a Chart-toned region with a Rule border. Nested cards are always forbidden.", "section": "elevation" },
+      { "name": "The Shadow-Means-Temporary Rule", "body": "If it casts a shadow, it must be dismissable and transient. Persistent structure never casts a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the resting screen entirely warm-neutral. If you see a hue, it must mean Alert, Caution, or Verified.",
+      "Do tint every neutral toward hue 70-75. Warm, never cold.",
+      "Do layer with Chart-on-Bone and hairline Rules to create structure.",
+      "Do reserve Newsreader for the patient name and note title, nothing else.",
+      "Do edit fields in place with click-to-edit; keep the whole note visible while editing.",
+      "Do give every generated field a visible path back to its transcript source.",
+      "Do pair every color signal with a text or icon channel.",
+      "Do keep transitions at 150-250ms and reserve motion for genuine state changes."
+    ],
+    "donts": [
+      "Don't use purple-to-blue gradients, glassmorphism, translucent floating cards, gradient text, or the hero-metric template. The current code commits this; delete it.",
+      "Don't reintroduce cold grey-on-grey chrome, native 1998 form controls, or unreadable compression.",
+      "Don't use #000 or #fff anywhere.",
+      "Don't introduce a fourth accent color or use any semantic color decoratively.",
+      "Don't put content in rounded white cards with drop shadows on a grey field. Never nest cards.",
+      "Don't open a modal to view or edit a note field.",
+      "Don't use a colored border-left greater than 1px as decoration; the only exception is the 2px Caution/Alert field marker.",
+      "Don't signal confidence, recording state, or validation with color alone.",
+      "Don't animate layout properties or add page-load choreography."
+    ]
+  }
+}

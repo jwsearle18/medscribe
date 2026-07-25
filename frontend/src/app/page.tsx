@@ -5,13 +5,13 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex flex-col items-center flex-1 bg-slate-800 pt-20 bg-pattern">
+      <main className="flex flex-col items-center flex-1 bg-bone pt-20">
         <Recording />
-        <div className="mb-10 text-center text-sm text-gray-300">
+        <div className="mb-10 text-center text-sm text-graphite">
           Reviewing a portfolio demo? Explore the seeded patient{" "}
           <Link
             href="/patient?patient_id=DEMO-1001"
-            className="underline font-medium hover:text-white"
+            className="underline font-medium text-ink hover:text-graphite"
           >
             DEMO-1001
           </Link>{" "}
