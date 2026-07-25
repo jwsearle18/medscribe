@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, useRef, useEffect, FormEvent } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import React, { useState, useRef, useEffect, FormEvent } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { MicrophoneIcon, PauseIcon, PlayIcon, StopIcon } from "@heroicons/react/24/solid";
+import Waveform from "./Waveform";
 
 // A canned encounter so reviewers can run the full pipeline
 // (save → generate note → view → PDF) without a microphone or API keys.
@@ -19,179 +21,282 @@ const SAMPLE_TRANSCRIPT = [
   "Speaker 1: Got it, thanks.",
 ].join("\n");
 
+type Status = "idle" | "recording" | "paused" | "transcribing";
+
+const formatElapsed = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
 const Recorder: React.FC = () => {
   const router = useRouter();
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [status, setStatus] = useState<Status>("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const [transcript, setTranscript] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [patientId, setPatientId] = useState('');
-  const [title, setTitle] = useState('');
+  const [patientId, setPatientId] = useState("");
+  const [title, setTitle] = useState("");
+  const [micError, setMicError] = useState<string | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Start recording
-  const handleStartRecording = async () => {
+  const isLive = status === "recording" || status === "paused";
+
+  // Elapsed timer runs only while actively recording (pauses when paused).
+  useEffect(() => {
+    if (status === "recording") {
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [status]);
+
+  const teardownAudio = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
+    setAnalyser(null);
+  };
+
+  const handleStart = async () => {
+    setMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+
+      // Live amplitude for the waveform. Source is not connected to the
+      // destination, so nothing is played back (no echo).
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      audioCtxRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const node = ctx.createAnalyser();
+      node.fftSize = 128;
+      node.smoothingTimeConstant = 0.8;
+      source.connect(node);
+      setAnalyser(node);
+
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
-      // Once recording stops, send the audio for transcription
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         audioChunksRef.current = [];
         const formData = new FormData();
-        formData.append('file', audioBlob, 'recording.webm');
-
+        formData.append("file", audioBlob, "recording.webm");
         try {
-          const transcribeResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/transcribe`,
-            {
-              method: 'POST',
-              body: formData,
-            }
-          );
-          if (!transcribeResponse.ok) {
-            throw new Error('Failed to transcribe audio');
-          }
-          const data = await transcribeResponse.json();
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/transcribe`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!res.ok) throw new Error("Failed to transcribe audio");
+          const data = await res.json();
           setTranscript(data.transcript);
-          console.log("Transcription stored with ID:", data.id);
         } catch (error) {
-          console.error('Error processing audio:', error);
+          console.error("Error processing audio:", error);
+          setMicError("The recording could not be transcribed. Please try again.");
+        } finally {
+          setStatus("idle");
         }
-
-        // Cleanup: stop all tracks (mic access)
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
+        teardownAudio();
       };
 
       mediaRecorder.start();
-      setIsRecording(true);
-      setIsPaused(false);
+      setElapsed(0);
+      setStatus("recording");
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error("Error accessing microphone:", error);
+      setMicError("Microphone access was blocked. Check your browser permissions, or load a sample below.");
+      teardownAudio();
     }
   };
 
-  // Pause or resume recording
   const handlePauseResume = () => {
-    if (!mediaRecorderRef.current) return;
-    if (!isPaused) {
-      mediaRecorderRef.current.pause();
-      setIsPaused(true);
+    const mr = mediaRecorderRef.current;
+    if (!mr) return;
+    if (status === "recording") {
+      mr.pause();
+      setStatus("paused");
+    } else if (status === "paused") {
+      mr.resume();
+      setStatus("recording");
+    }
+  };
+
+  const handleStop = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      setStatus("transcribing");
+      mr.stop();
     } else {
-      mediaRecorderRef.current.resume();
-      setIsPaused(false);
+      setStatus("idle");
+      teardownAudio();
     }
   };
 
-  // Stop recording
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
-    setIsPaused(false);
-  };
-
-  // Cleanup on unmount (if user leaves mid-recording)
   useEffect(() => {
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
+      teardownAudio();
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  // Handle save form submission
   const handleSaveSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/save-transcription`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientId,
-          transcript,
-          title
-        }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId, transcript, title }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to save transcription');
-      }
-      const data = await response.json();
-      console.log('Transcription saved:', data);
-      // Close modal and clear form fields
+      if (!response.ok) throw new Error("Failed to save transcription");
+      await response.json();
       router.push(`/patient?patient_id=${encodeURIComponent(patientId)}`);
-      setPatientId('');
-      setTitle('');
+      setPatientId("");
+      setTitle("");
     } catch (error) {
-      console.error('Error saving transcription:', error);
+      console.error("Error saving transcription:", error);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto text-center p-10">
-      <h1 className="text-2xl font-bold mb-2">Record a conversation</h1>
-      <p className="text-gray-600 mb-6">
-        Tap the microphone icon to start recording. Tap again to pause, or tap the stop button to finish.
+    <div className="mx-auto w-full max-w-2xl px-6 py-8 text-center">
+      <h1 className="font-serif text-[1.75rem] leading-tight tracking-[-0.01em] text-ink">
+        Record a conversation
+      </h1>
+      <p className="mx-auto mt-1.5 max-w-md text-[0.9375rem] text-graphite">
+        Start recording to capture the encounter. MedScribe transcribes it with speaker separation,
+        then drafts a structured note.
       </p>
 
-      <div className="flex justify-center space-x-4 mb-6">
-        <button
-          className="px-4 py-2 recording-btn text-white rounded"
-          onClick={handleStartRecording}
-          disabled={isRecording}
-        >
-          Start
-        </button>
-        <button
-          className="px-4 py-2 recording-btn text-white rounded"
-          onClick={handlePauseResume}
-          disabled={!isRecording}
-        >
-          {isPaused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="px-4 py-2 recording-btn text-white rounded"
-          onClick={handleStopRecording}
-          disabled={!isRecording && !isPaused}
-        >
-          Stop
-        </button>
+      {/* Recorder surface */}
+      <div className="mt-7 rounded-lg border border-rule bg-chart px-6 py-7">
+        {status === "idle" && (
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={handleStart}
+              aria-label="Start recording"
+              className="focus-ring group flex h-20 w-20 items-center justify-center rounded-full bg-ink text-bone transition-colors hover:bg-graphite"
+            >
+              <MicrophoneIcon className="h-8 w-8" />
+            </button>
+            <span className="mt-3 text-[0.875rem] font-medium text-ink">Start recording</span>
+          </div>
+        )}
+
+        {isLive && (
+          <div className="flex flex-col items-center">
+            {/* State line: pulsing dot when live, static when paused, + timer */}
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                {status === "recording" && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink opacity-60" />
+                )}
+                <span
+                  className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+                    status === "recording" ? "bg-ink" : "bg-mute"
+                  }`}
+                />
+              </span>
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.09em] text-graphite">
+                {status === "recording" ? "Recording" : "Paused"}
+              </span>
+              <span className="font-mono text-[0.9375rem] tabular-nums text-ink">
+                {formatElapsed(elapsed)}
+              </span>
+            </div>
+
+            <div className="w-full max-w-md">
+              <Waveform analyser={analyser} paused={status === "paused"} />
+            </div>
+
+            {/* Controls: Pause/Resume (secondary) + Stop (primary) */}
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handlePauseResume}
+                aria-label={status === "paused" ? "Resume recording" : "Pause recording"}
+                className="focus-ring flex h-12 w-12 items-center justify-center rounded-full border border-rule-strong bg-bone text-ink transition-colors hover:bg-chart"
+              >
+                {status === "paused" ? (
+                  <PlayIcon className="h-5 w-5" />
+                ) : (
+                  <PauseIcon className="h-5 w-5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleStop}
+                aria-label="Stop and transcribe"
+                className="focus-ring flex h-14 items-center gap-2 rounded-full bg-ink px-6 text-bone transition-colors hover:bg-graphite"
+              >
+                <StopIcon className="h-5 w-5" />
+                <span className="text-[0.9375rem] font-semibold">Stop</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {status === "transcribing" && (
+          <div className="flex flex-col items-center py-2">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-rule border-t-ink" />
+            <span className="mt-3 text-[0.875rem] text-graphite">
+              Transcribing the conversation…
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="mb-6">
-        <button
-          className="text-sm text-gray-500 underline hover:text-gray-300"
-          onClick={() => setTranscript(SAMPLE_TRANSCRIPT)}
-        >
-          No microphone? Load a sample conversation
-        </button>
-      </div>
+      {micError && <p className="mt-3 text-[0.8125rem] text-alert">{micError}</p>}
+
+      {status === "idle" && !transcript && (
+        <div className="mt-4">
+          <button
+            type="button"
+            className="focus-ring rounded-sm text-[0.8125rem] text-graphite underline decoration-rule-strong underline-offset-2 hover:text-ink"
+            onClick={() => setTranscript(SAMPLE_TRANSCRIPT)}
+          >
+            No microphone? Load a sample conversation
+          </button>
+        </div>
+      )}
 
       {transcript && (
-        <div className="glass-card p-4 rounded">
-          <h2 className="text-xl font-semibold mb-2">Transcription</h2>
-          <p className="whitespace-pre-line text-left">{transcript}</p>
+        <div className="mt-6 rounded-lg border border-rule bg-chart p-5 text-left">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="label">Transcript</span>
+            <button
+              type="button"
+              className="focus-ring rounded-sm text-[0.8125rem] text-mute underline decoration-rule-strong underline-offset-2 hover:text-ink"
+              onClick={() => setTranscript("")}
+            >
+              Clear
+            </button>
+          </div>
+          <p className="whitespace-pre-line text-[0.875rem] leading-relaxed text-ink">{transcript}</p>
           <button
-            className="mt-4 px-4 py-2 green-btn"
+            type="button"
+            className="focus-ring mt-4 inline-flex items-center rounded-md bg-ink px-4 py-2 text-[0.875rem] font-semibold text-bone hover:bg-graphite"
             onClick={() => setShowSaveModal(true)}
           >
-            Save Transcription
+            Save to a patient record
           </button>
         </div>
       )}
@@ -203,60 +308,65 @@ const Recorder: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 flex items-center justify-center bg-black/70"
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-4"
+            onClick={() => setShowSaveModal(false)}
           >
             <motion.div
               key="modalContent"
-              initial={{ y: 50 }}
-              animate={{ y: 0 }}
-              exit={{ y: 50 }}
-              transition={{
-                type: 'spring',
-                stiffness: 200,
-                damping: 25,
-                duration: 0.75
-              }}
-              className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+              className="overlay-shadow w-full max-w-md rounded-lg border border-rule bg-bone p-6 text-left"
+              onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold mb-4">Save Transcription</h3>
-              <form onSubmit={handleSaveSubmit} className="space-y-4">
+              <h3 className="font-serif text-[1.25rem] text-ink">Save to a patient record</h3>
+              <p className="mt-1 text-[0.8125rem] text-mute">
+                File this transcript under a patient so a note can be generated.
+              </p>
+              <form onSubmit={handleSaveSubmit} className="mt-4 space-y-4">
                 <div>
-                  <label htmlFor="patientId" className="block text-left mb-1">
+                  <label htmlFor="patientId" className="label mb-1 block">
                     Patient ID
                   </label>
                   <input
                     id="patientId"
                     type="text"
-                    className="w-full border px-3 py-2 rounded"
+                    className="focus-ring w-full rounded-md border border-rule bg-bone px-3 py-2 text-[0.9375rem] text-ink placeholder-mute focus:border-ink"
+                    placeholder="e.g. DEMO-1002"
                     value={patientId}
                     onChange={(e) => setPatientId(e.target.value)}
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="title" className="block text-left mb-1">
-                    Title
+                  <label htmlFor="title" className="label mb-1 block">
+                    Visit title
                   </label>
                   <input
                     id="title"
                     type="text"
-                    className="w-full border px-3 py-2 rounded"
+                    className="focus-ring w-full rounded-md border border-rule bg-bone px-3 py-2 text-[0.9375rem] text-ink placeholder-mute focus:border-ink"
+                    placeholder="e.g. Ankle injury — initial visit"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
                   />
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end gap-2 pt-1">
                   <button
                     type="button"
-                    className="px-4 py-2 gray-btn"
+                    className="focus-ring rounded-md border border-rule bg-transparent px-4 py-2 text-[0.875rem] font-medium text-ink hover:bg-chart"
                     onClick={() => setShowSaveModal(false)}
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="px-4 py-2 recording-btn">
-                    Save
+                  <button
+                    type="submit"
+                    className="focus-ring rounded-md bg-ink px-4 py-2 text-[0.875rem] font-semibold text-bone hover:bg-graphite"
+                  >
+                    Save record
                   </button>
                 </div>
               </form>

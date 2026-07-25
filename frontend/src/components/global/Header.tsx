@@ -50,7 +50,7 @@ const Header: React.FC = () => {
         {/* Brand: the serif signals a record about a person. */}
         <Link href="/" className="focus-ring rounded-sm">
           <span className="font-serif text-[1.35rem] leading-none tracking-[-0.01em] text-ink hover:text-graphite transition-colors">
-            MedScribe
+            CodeMed AI
           </span>
         </Link>
 
